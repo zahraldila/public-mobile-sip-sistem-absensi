@@ -3,6 +3,7 @@ import 'package:nfc_manager/nfc_manager.dart';
 
 import '../../core/services/attendance_service.dart';
 import '../../core/services/tts_service.dart';
+import '../../core/utils/color_helper.dart';
 import '../attendance/checkout_success_screen.dart';
 import '../attendance/success_screen.dart';
 import 'widgets/clock_widget.dart';
@@ -24,10 +25,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _companyName = 'PT Selada Indonesia Produktif';
   String? _logoUrl;
+  Color _primaryColor = const Color(0xFF0891B2); // Default fallback warna SIP (#0891B2)
   bool _isLoadingProfile = true;
 
   // Double-scan protection flag
   bool _isProcessing = false;
+
+  // Cooldown 5 detik per nomor seri kartu
+  final Map<String, DateTime> _cardCooldowns = {};
 
   @override
   void initState() {
@@ -48,6 +53,10 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _companyName = profile['company_name'] ?? 'PT Selada Indonesia Produktif';
         _logoUrl = profile['company_logo'];
+        _primaryColor = ColorHelper.parseHexColor(
+          profile['primary_color'],
+          defaultColor: const Color(0xFF0891B2),
+        );
         _isLoadingProfile = false;
       });
     }
@@ -98,8 +107,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Memproses alur absensi NFC
   Future<void> _handleNfcAttendance(String nfcSerialNumber) async {
-    if (_isProcessing) return; // Mencegah double tap / scan berulang
+    final now = DateTime.now();
 
+    // Cooldown 5 detik khusus nomor seri kartu ini
+    if (_cardCooldowns.containsKey(nfcSerialNumber)) {
+      final lastTap = _cardCooldowns[nfcSerialNumber]!;
+      if (now.difference(lastTap).inMilliseconds < 5000) {
+        debugPrint('Kartu $nfcSerialNumber masih dalam masa cooldown');
+        return;
+      }
+    }
+
+    if (_isProcessing) return;
+
+    _cardCooldowns[nfcSerialNumber] = now;
     setState(() => _isProcessing = true);
 
     try {
@@ -111,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // 1. Putar Suara Check-In
         _ttsService.speakCheckIn(result.employeeName);
 
-        // 2. Tampilkan Layar Sukses Check-In (Akan auto pop dalam 3 detik)
+        // 2. Tampilkan Layar Sukses Check-In (Auto pop dalam 3 detik)
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -129,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // 1. Putar Suara Check-Out
         _ttsService.speakCheckOut(result.employeeName);
 
-        // 2. Tampilkan Layar Sukses Check-Out (Akan auto pop dalam 3 detik)
+        // 2. Tampilkan Layar Sukses Check-Out (Auto pop dalam 3 detik)
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -143,38 +164,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         );
-      } else if (result.status == AttendanceStatus.alreadyCompleted) {
-        // 1. Putar Suara Absensi Sudah Selesai
-        _ttsService.speakAlreadyCompleted();
-
-        // 2. Tampilkan notifikasi info sejenak
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF1E293B),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            duration: const Duration(seconds: 3),
-            content: Row(
-              children: [
-                const Icon(Icons.info_outline, color: Color(0xFF60A5FA)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '${result.employeeName}, Anda sudah menyelesaikan absensi hari ini.',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-        await Future.delayed(const Duration(seconds: 3));
       }
     } catch (e) {
       debugPrint('Error proses absensi: $e');
       if (mounted) {
         final errorMsg = e.toString().replaceAll('Exception:', '').trim();
-        if (errorMsg.contains('Kartu NFC tidak terdaftar')) {
+        if (errorMsg.contains('tidak terdaftar') ||
+            errorMsg.contains('tidak aktif') ||
+            errorMsg.contains('tidak ditemukan')) {
           _ttsService.speakCardNotFound();
         } else {
           _ttsService.speak('Gagal memproses absensi.');
@@ -182,18 +179,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFFDC2626),
+            backgroundColor: const Color(0xFF0F172A),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             duration: const Duration(seconds: 3),
             content: Row(
               children: [
-                const Icon(Icons.error_outline, color: Colors.white),
+                const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     errorMsg,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -204,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isProcessing = false); // Scanner kembali siap membaca kartu berikutnya
+        setState(() => _isProcessing = false);
       }
     }
   }
@@ -212,40 +214,56 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-          child: Column(
-            children: [
-              // Header Perusahaan (Logo & Nama)
-              CompanyHeader(
-                companyName: _companyName,
-                logoUrl: _logoUrl,
-                isLoading: _isLoadingProfile,
-              ),
-
-              const Spacer(flex: 1),
-
-              // Jam Realtime & Tanggal Indonesia
-              ClockWidget(timeStream: _timeStream),
-
-              const Spacer(flex: 1),
-
-              // Area Pemindaian Kartu NFC dengan Animasi Pulse/Ripple
-              Expanded(
-                flex: 6,
-                child: NfcScanArea(
-                  isProcessing: _isProcessing,
-                  onSimulateTap: () {
-                    // Fitur simulasi kartu jika diuji di emulator / tanpa perangkat NFC fisik
-                    _handleNfcAttendance('SIMULASI_ID');
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 20),
+      body: Container(
+        // Latar Belakang Classic Executive: Warm Ivory Gradient Halus
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFAFAFE),
+              Color(0xFFF1F4F9),
             ],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22.0, vertical: 18.0),
+            child: Column(
+              children: [
+                // Header Perusahaan dengan Warna Dinamis
+                CompanyHeader(
+                  companyName: _companyName,
+                  logoUrl: _logoUrl,
+                  isLoading: _isLoadingProfile,
+                  primaryColor: _primaryColor,
+                ),
+
+                const Spacer(flex: 1),
+
+                // Digital Clock Hub dengan Aksen Warna Dinamis
+                ClockWidget(
+                  timeStream: _timeStream,
+                  primaryColor: _primaryColor,
+                ),
+
+                const Spacer(flex: 1),
+
+                // Area Pemindai Kartu NFC (Medallion & Ripple Dinamis sesuai primary_color)
+                Expanded(
+                  flex: 8,
+                  child: NfcScanArea(
+                    isProcessing: _isProcessing,
+                    primaryColor: _primaryColor,
+                    onSimulateTap: () {
+                      _handleNfcAttendance('SIMULASI_ID');
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),
