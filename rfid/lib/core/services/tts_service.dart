@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -12,10 +13,46 @@ class TtsService {
   Future<void> init() async {
     if (_isInitialized) return;
     try {
+      // Prioritaskan Google Text-to-Speech Engine jika di Android
+      if (Platform.isAndroid) {
+        try {
+          final dynamic engines = await _flutterTts.getEngines;
+          if (engines is List && engines.contains('com.google.android.tts')) {
+            await _flutterTts.setEngine('com.google.android.tts');
+          }
+        } catch (e) {
+          debugPrint('Info getEngines: $e');
+        }
+      }
+
+      // Set Bahasa Indonesia
       await _flutterTts.setLanguage('id-ID');
-      await _flutterTts.setSpeechRate(0.5); // Kecepatan bicara normal dan jelas
-      await _flutterTts.setVolume(1.0);     // Volume maksimal
-      await _flutterTts.setPitch(1.0);      // Nada normal
+
+      // Cari dan pasang model suara Bahasa Indonesia Google jika tersedia
+      try {
+        final dynamic voices = await _flutterTts.getVoices;
+        if (voices is List) {
+          for (var voice in voices) {
+            if (voice is Map) {
+              final locale = voice['locale']?.toString().toLowerCase() ?? '';
+              if (locale.contains('id-id') || locale.contains('id_id') || locale == 'ind') {
+                await _flutterTts.setVoice({
+                  'name': voice['name'].toString(),
+                  'locale': voice['locale'].toString(),
+                });
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Info voice selector: $e');
+      }
+
+      // Parameter artikulasi suara yang natural
+      await _flutterTts.setSpeechRate(0.48); // Kecepatan bicara natural
+      await _flutterTts.setVolume(1.0);      // Volume maksimal
+      await _flutterTts.setPitch(1.0);       // Pitch natural (tidak cempreng/robotik)
       await _flutterTts.awaitSpeakCompletion(true);
       _isInitialized = true;
     } catch (e) {
