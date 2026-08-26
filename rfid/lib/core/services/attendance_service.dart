@@ -45,6 +45,7 @@ class AttendanceService {
 
       String? name = 'PT Selada Indonesia Produktif';
       String? logoUrl;
+      String? primaryColorHex = '#0891B2';
 
       if (data.isNotEmpty) {
         for (var row in data) {
@@ -55,14 +56,24 @@ class AttendanceService {
             if (logoPath.isNotEmpty) {
               logoUrl = '${SupabaseConfig.url}/storage/v1/object/public/$logoPath';
             }
+          } else if (row['key'] == 'primary_color' && row['value'] != null) {
+            primaryColorHex = row['value'].toString();
           }
         }
       }
 
-      return {'company_name': name, 'company_logo': logoUrl};
+      return {
+        'company_name': name,
+        'company_logo': logoUrl,
+        'primary_color': primaryColorHex,
+      };
     } catch (e) {
       debugPrint('Error fetchCompanyProfile: $e');
-      return {'company_name': 'PT Selada Indonesia Produktif', 'company_logo': null};
+      return {
+        'company_name': 'PT Selada Indonesia Produktif',
+        'company_logo': null,
+        'primary_color': '#0891B2',
+      };
     }
   }
 
@@ -104,12 +115,14 @@ class AttendanceService {
     final String todayFormatted = DateTimeHelper.formatDateIndonesian(now);
     final String currentTimeFormatted = DateTimeHelper.formatTime(now);
 
-    // 3. Cek apakah ada record absensi pada HARI INI
+    // 3. Cek sesi absensi pada HARI INI (ambil sesi terbaru)
     final existingAttendance = await _supabase
         .from('absensi')
         .select()
         .eq('pegawai_id', pegawaiId)
         .eq('tanggal_absensi', todayDateIso)
+        .order('jam_checkin', ascending: false)
+        .limit(1)
         .maybeSingle();
 
     // 4. Tentukan Alur Transaksi (Check In / Check Out / Selesai)
