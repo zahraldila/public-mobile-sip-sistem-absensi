@@ -164,6 +164,37 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         );
+      } else if (result.status == AttendanceStatus.alreadyCompleted) {
+        // 1. Putar Suara: "Absensi hari ini sudah selesai."
+        _ttsService.speakAlreadyCompleted();
+
+        // 2. Tampilkan notifikasi visual sejenak di layar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF0F172A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            duration: const Duration(seconds: 3),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF10B981)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${result.employeeName}, absensi hari ini sudah selesai.',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        await Future.delayed(const Duration(seconds: 3));
       }
     } catch (e) {
       debugPrint('Error proses absensi: $e');
