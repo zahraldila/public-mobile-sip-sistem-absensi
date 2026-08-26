@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/color_helper.dart';
 
 class NfcScanArea extends StatefulWidget {
   final bool isProcessing;
   final VoidCallback onSimulateTap;
+  final Color primaryColor;
 
   const NfcScanArea({
     super.key,
     required this.isProcessing,
     required this.onSimulateTap,
+    this.primaryColor = const Color(0xFF0891B2),
   });
 
   @override
@@ -25,20 +28,20 @@ class _NfcScanAreaState extends State<NfcScanArea>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: false);
+      duration: const Duration(milliseconds: 2600),
+    )..repeat();
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.35).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.4).animate(
       CurvedAnimation(
         parent: _pulseController,
-        curve: Curves.easeOutQuad,
+        curve: Curves.easeOutCubic,
       ),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.6, end: 0.0).animate(
+    _fadeAnimation = Tween<double>(begin: 0.45, end: 0.0).animate(
       CurvedAnimation(
         parent: _pulseController,
-        curve: Curves.easeOutQuad,
+        curve: Curves.easeOutCubic,
       ),
     );
   }
@@ -51,33 +54,37 @@ class _NfcScanAreaState extends State<NfcScanArea>
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = widget.primaryColor;
+    final darkerPrimaryColor = ColorHelper.getDarkerColor(primaryColor, 0.75);
+
     return GestureDetector(
       onTap: widget.isProcessing ? null : widget.onSimulateTap,
       child: Container(
         width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: Colors.grey.shade200, width: 1.2),
+          borderRadius: BorderRadius.circular(36),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 28,
-              offset: const Offset(0, 12),
+              color: const Color(0xFF0F172A).withOpacity(0.04),
+              blurRadius: 36,
+              offset: const Offset(0, 14),
             ),
           ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Area Ikon NFC dengan Efek Pulse / Ripple
+            // Target Sensor Medallion RFID (Dinamis Sesuai primary_color)
             SizedBox(
-              width: 190,
-              height: 190,
+              width: 180,
+              height: 180,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Outer Animated Ripple Ring (aktif saat standby)
+                  // Gelombang Ripple Halus (Dinamis)
                   if (!widget.isProcessing)
                     AnimatedBuilder(
                       animation: _pulseController,
@@ -89,7 +96,7 @@ class _NfcScanAreaState extends State<NfcScanArea>
                             height: 140,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: const Color(0xFF2B5BE3)
+                              color: primaryColor
                                   .withOpacity(_fadeAnimation.value * 0.35),
                             ),
                           ),
@@ -97,34 +104,52 @@ class _NfcScanAreaState extends State<NfcScanArea>
                       },
                     ),
 
-                  // Lingkaran Luar Statis
+                  // Cincin Luar (Acrylic Ring)
                   Container(
-                    width: 150,
-                    height: 150,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE5EEFF),
+                    width: 146,
+                    height: 146,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFE2E8F0),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+
+                  // Cincin Tengah Halus (Soft Halo Dinamis)
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.12),
                       shape: BoxShape.circle,
                     ),
                   ),
 
-                  // Lingkaran Inti Ikon
+                  // Inti Medallion (Gradient Dinamis dari primary_color)
                   Container(
-                    width: 96,
-                    height: 96,
+                    width: 92,
+                    height: 92,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2B5BE3),
+                      gradient: LinearGradient(
+                        colors: [darkerPrimaryColor, primaryColor],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF2B5BE3).withOpacity(0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
+                          color: primaryColor.withOpacity(0.35),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
                     child: widget.isProcessing
                         ? const Padding(
-                            padding: EdgeInsets.all(24.0),
+                            padding: EdgeInsets.all(26.0),
                             child: CircularProgressIndicator(
                               color: Colors.white,
                               strokeWidth: 3,
@@ -133,58 +158,75 @@ class _NfcScanAreaState extends State<NfcScanArea>
                         : const Icon(
                             Icons.contactless,
                             color: Colors.white,
-                            size: 52,
+                            size: 48,
                           ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 32),
 
-            // Teks Status
+            // Judul Panduan Tegas & Berkelas
             const Text(
               'TEMPELKAN KARTU NFC',
               style: TextStyle(
-                fontSize: 19,
+                fontSize: 17,
                 fontWeight: FontWeight.w900,
-                color: Colors.black,
-                letterSpacing: 0.5,
+                color: Color(0xFF0F172A),
+                letterSpacing: 1.0,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 6),
 
-            // Badge Ready to Scan
+            // Subtitle Deskriptif
+            const Text(
+              'Dekatkan ID Card / RFID ke area sensor',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // Badge Status Siap Scan (Emerald Executive Pill)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
               decoration: BoxDecoration(
                 color: widget.isProcessing
-                    ? const Color(0xFFF3F4F6)
-                    : const Color(0xFFD4F4E4),
+                    ? const Color(0xFFF1F5F9)
+                    : const Color(0xFFECFDF5),
                 borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: widget.isProcessing
+                      ? const Color(0xFFCBD5E1)
+                      : const Color(0xFFA7F3D0),
+                  width: 1.2,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 12,
-                    height: 12,
+                    width: 9,
+                    height: 9,
                     decoration: BoxDecoration(
                       color: widget.isProcessing
-                          ? Colors.grey
-                          : const Color(0xFF138A5F),
+                          ? Colors.grey.shade500
+                          : const Color(0xFF059669),
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Text(
                     widget.isProcessing ? 'MEMPROSES...' : 'READY TO SCAN',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: widget.isProcessing
                           ? Colors.grey.shade700
-                          : const Color(0xFF116B48),
-                      letterSpacing: 0.5,
+                          : const Color(0xFF065F46),
+                      letterSpacing: 0.8,
                     ),
                   ),
                 ],

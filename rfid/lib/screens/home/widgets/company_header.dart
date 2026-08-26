@@ -4,19 +4,21 @@ class CompanyHeader extends StatelessWidget {
   final String companyName;
   final String? logoUrl;
   final bool isLoading;
+  final Color primaryColor;
 
   const CompanyHeader({
     super.key,
     required this.companyName,
     this.logoUrl,
     this.isLoading = false,
+    this.primaryColor = const Color(0xFF0891B2),
   });
 
   Widget _buildDefaultLogo() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(12),
       ),
       alignment: Alignment.center,
       child: const Text(
@@ -25,7 +27,7 @@ class CompanyHeader extends StatelessWidget {
           color: Colors.white,
           fontSize: 16,
           fontWeight: FontWeight.w900,
-          letterSpacing: 1,
+          letterSpacing: 2,
         ),
       ),
     );
@@ -35,28 +37,37 @@ class CompanyHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
+        // Logo Perusahaan dengan Frame Elegan
         Container(
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          padding: const EdgeInsets.all(2),
+          padding: const EdgeInsets.all(3),
           child: isLoading
-              ? const Center(
+              ? Center(
                   child: SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
+                      color: primaryColor,
                       strokeWidth: 2,
                     ),
                   ),
                 )
               : (logoUrl != null && logoUrl!.isNotEmpty
                   ? ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(10),
                       child: Image.network(
                         logoUrl!,
                         fit: BoxFit.cover,
@@ -67,22 +78,25 @@ class CompanyHeader extends StatelessWidget {
                   : _buildDefaultLogo()),
         ),
         const SizedBox(width: 14),
+
+        // Nama Perusahaan
         Expanded(
           child: isLoading
               ? Container(
                   height: 20,
-                  width: double.infinity,
+                  width: 150,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4),
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(6),
                   ),
                 )
               : Text(
                   companyName,
                   style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.2,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
