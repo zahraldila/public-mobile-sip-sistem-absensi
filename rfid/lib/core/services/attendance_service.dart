@@ -103,6 +103,12 @@ class AttendanceService {
       throw Exception('Data pegawai tidak ditemukan');
     }
 
+    // Validasi apakah akun pegawai berstatus Aktif
+    final String? employeeStatus = pegawaiData['status']?.toString().trim();
+    if (employeeStatus == null || employeeStatus.toLowerCase() != 'aktif') {
+      throw Exception('Akun pegawai tidak aktif. Presensi ditolak.');
+    }
+
     final String employeeName = pegawaiData['nama_pegawai']?.toString() ?? 'Pegawai';
     final String employeeNip = pegawaiData['nip']?.toString() ?? 'N/A';
     final String? rawFoto = pegawaiData['foto_profile']?.toString();

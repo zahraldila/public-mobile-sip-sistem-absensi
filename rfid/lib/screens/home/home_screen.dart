@@ -165,8 +165,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       } else if (result.status == AttendanceStatus.alreadyCompleted) {
-        // 1. Putar Suara: "Absensi hari ini sudah selesai."
-        _ttsService.speakAlreadyCompleted();
+        // 1. Putar Suara: "Absensi hari ini sudah selesai, [Nama Pegawai]."
+        _ttsService.speakAlreadyCompleted(result.employeeName);
 
         // 2. Tampilkan notifikasi visual sejenak di layar
         ScaffoldMessenger.of(context).showSnackBar(
@@ -200,8 +200,9 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('Error proses absensi: $e');
       if (mounted) {
         final errorMsg = e.toString().replaceAll('Exception:', '').trim();
-        if (errorMsg.contains('tidak terdaftar') ||
-            errorMsg.contains('tidak aktif') ||
+        if (errorMsg.contains('tidak aktif')) {
+          _ttsService.speakInactiveAccount();
+        } else if (errorMsg.contains('tidak terdaftar') ||
             errorMsg.contains('tidak ditemukan')) {
           _ttsService.speakCardNotFound();
         } else {

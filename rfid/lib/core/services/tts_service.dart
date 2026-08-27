@@ -82,12 +82,17 @@ class TtsService {
     await speak('Check Out berhasil. Terima kasih, $name.');
   }
 
-  Future<void> speakAlreadyCompleted() async {
-    await speak('Absensi hari ini sudah selesai.');
+  Future<void> speakAlreadyCompleted(String employeeName) async {
+    final name = employeeName.isNotEmpty ? employeeName : 'Pegawai';
+    await speak('Absensi hari ini sudah selesai, $name.');
   }
 
   Future<void> speakCardNotFound() async {
     await speak('Kartu tidak terdaftar. Silakan hubungi administrator.');
+  }
+
+  Future<void> speakInactiveAccount() async {
+    await speak('Akun pegawai tidak aktif. Silakan hubungi administrator.');
   }
 
   Future<void> stop() async {
