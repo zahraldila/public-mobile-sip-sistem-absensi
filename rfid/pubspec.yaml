@@ -37,6 +37,7 @@ dependencies:
   supabase_flutter: ^2.17.2
   nfc_manager: ^4.1.1
   flutter_tts: ^4.2.2
+  geolocator: ^12.0.0
 
 dev_dependencies:
   flutter_test:

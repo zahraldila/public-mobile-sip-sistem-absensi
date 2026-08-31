@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
 import '../utils/date_time_helper.dart';
+import 'location_service.dart';
 
 enum AttendanceStatus {
   checkInSuccess,
@@ -186,6 +187,11 @@ class AttendanceService {
     final String todayFormatted = DateTimeHelper.formatDateIndonesian(now);
     final String currentTimeFormatted = DateTimeHelper.formatTime(now);
 
+    // Ambil koordinat GPS nyata dari sensor perangkat saat ini (dengan fallback ke cabang terpilih)
+    final deviceGps = await LocationService.getCurrentPosition();
+    final double? currentLatitude = deviceGps?.latitude ?? selectedLocation?.latitude;
+    final double? currentLongitude = deviceGps?.longitude ?? selectedLocation?.longitude;
+
     // 3. Cek sesi absensi pada HARI INI (ambil sesi terbaru)
     final existingAttendance = await _supabase
         .from('absensi')
@@ -219,8 +225,8 @@ class AttendanceService {
         'skema_kerja': 'WFO',
         'status_kehadiran': 'Hadir',
         if (jadwalId != null) 'jadwal_id': jadwalId,
-        if (selectedLocation?.latitude != null) 'latitude': selectedLocation!.latitude,
-        if (selectedLocation?.longitude != null) 'longitude': selectedLocation!.longitude,
+        if (currentLatitude != null) 'latitude': currentLatitude,
+        if (currentLongitude != null) 'longitude': currentLongitude,
       };
 
       await _supabase.from('absensi').insert(insertPayload);
@@ -247,8 +253,8 @@ class AttendanceService {
           .from('absensi')
           .update({
             'jam_checkout': now.toIso8601String(),
-            if (selectedLocation?.latitude != null) 'latitude': selectedLocation!.latitude,
-            if (selectedLocation?.longitude != null) 'longitude': selectedLocation!.longitude,
+            if (currentLatitude != null) 'latitude': currentLatitude,
+            if (currentLongitude != null) 'longitude': currentLongitude,
           })
           .eq('absensi_id', existingAttendance['absensi_id']);
 
