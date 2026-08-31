@@ -6,8 +6,10 @@ import '../../core/services/tts_service.dart';
 import '../../core/utils/color_helper.dart';
 import '../attendance/checkout_success_screen.dart';
 import '../attendance/success_screen.dart';
+import 'views/branch_selection_view.dart';
 import 'widgets/clock_widget.dart';
 import 'widgets/company_header.dart';
+import 'widgets/location_picker_badge.dart';
 import 'widgets/nfc_scan_area.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -28,6 +30,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Color _primaryColor = const Color(0xFF0891B2); // Default fallback warna SIP (#0891B2)
   bool _isLoadingProfile = true;
 
+  // Daftar Cabang / Lokasi Kantor Dinamis
+  List<OfficeLocation> _locations = [];
+  OfficeLocation? _selectedLocation;
+
   // Double-scan protection flag
   bool _isProcessing = false;
 
@@ -44,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _ttsService.init();
     _loadCompanyProfile();
+    _loadLocations();
     _initNfcListener();
   }
 
@@ -58,6 +65,15 @@ class _HomeScreenState extends State<HomeScreen> {
           defaultColor: const Color(0xFF0891B2),
         );
         _isLoadingProfile = false;
+      });
+    }
+  }
+
+  Future<void> _loadLocations() async {
+    final locs = await _attendanceService.fetchLocations();
+    if (mounted && locs.isNotEmpty) {
+      setState(() {
+        _locations = locs;
       });
     }
   }
@@ -105,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// Memproses alur absensi NFC
+  /// Memproses alur absensi NFC dengan lokasi cabang terpilih
   Future<void> _handleNfcAttendance(String nfcSerialNumber) async {
     final now = DateTime.now();
 
@@ -124,7 +140,10 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      final result = await _attendanceService.processNfcTap(nfcSerialNumber);
+      final result = await _attendanceService.processNfcTap(
+        nfcSerialNumber,
+        selectedLocation: _selectedLocation,
+      );
 
       if (!mounted) return;
 
@@ -245,6 +264,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. TAMPILAN AWAL: Jika lokasi cabang belum dipilih, tampilkan layar pemilihan cabang
+    if (_selectedLocation == null) {
+      return BranchSelectionView(
+        companyName: _companyName,
+        logoUrl: _logoUrl,
+        locations: _locations,
+        primaryColor: _primaryColor,
+        onLocationConfirmed: (OfficeLocation chosenLocation) {
+          setState(() {
+            _selectedLocation = chosenLocation;
+          });
+        },
+      );
+    }
+
+    // 2. TAMPILAN UTAMA: Setelah cabang dipilih, tampilkan jam digital dan area scanner absensi
     return Scaffold(
       body: Container(
         // Latar Belakang Classic Executive: Warm Ivory Gradient Halus
@@ -263,12 +298,20 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 22.0, vertical: 18.0),
             child: Column(
               children: [
-                // Header Perusahaan dengan Warna Dinamis
+                // Header Perusahaan dengan Badge Cabang Terpilih
                 CompanyHeader(
                   companyName: _companyName,
                   logoUrl: _logoUrl,
                   isLoading: _isLoadingProfile,
                   primaryColor: _primaryColor,
+                  trailing: LocationPickerBadge(
+                    locations: _locations,
+                    selectedLocation: _selectedLocation,
+                    primaryColor: _primaryColor,
+                    onLocationChanged: (newLoc) {
+                      setState(() => _selectedLocation = newLoc);
+                    },
+                  ),
                 ),
 
                 const Spacer(flex: 1),

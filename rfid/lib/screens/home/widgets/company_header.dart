@@ -5,6 +5,7 @@ class CompanyHeader extends StatelessWidget {
   final String? logoUrl;
   final bool isLoading;
   final Color primaryColor;
+  final Widget? trailing;
 
   const CompanyHeader({
     super.key,
@@ -12,6 +13,7 @@ class CompanyHeader extends StatelessWidget {
     this.logoUrl,
     this.isLoading = false,
     this.primaryColor = const Color(0xFF0891B2),
+    this.trailing,
   });
 
   Widget _buildDefaultLogo() {
@@ -93,7 +95,7 @@ class CompanyHeader extends StatelessWidget {
               : Text(
                   companyName,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF0F172A),
                     letterSpacing: -0.2,
@@ -102,6 +104,12 @@ class CompanyHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
         ),
+
+        // Trailing Widget (misal: Pilihan Cabang Dinamis)
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing!,
+        ],
       ],
     );
   }

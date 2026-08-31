@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../config/supabase_config.dart';
 import '../utils/date_time_helper.dart';
 
@@ -7,6 +8,33 @@ enum AttendanceStatus {
   checkInSuccess,
   checkOutSuccess,
   alreadyCompleted,
+  error,
+}
+
+class OfficeLocation {
+  final int id;
+  final String name;
+  final double? latitude;
+  final double? longitude;
+  final int? radiusMeter;
+
+  OfficeLocation({
+    required this.id,
+    required this.name,
+    this.latitude,
+    this.longitude,
+    this.radiusMeter,
+  });
+
+  factory OfficeLocation.fromJson(Map<String, dynamic> json) {
+    return OfficeLocation(
+      id: int.parse(json['lokasi_id'].toString()),
+      name: json['nama_kantor']?.toString() ?? 'Cabang',
+      latitude: double.tryParse(json['latitude']?.toString() ?? ''),
+      longitude: double.tryParse(json['longitude']?.toString() ?? ''),
+      radiusMeter: int.tryParse(json['radius_meter']?.toString() ?? ''),
+    );
+  }
 }
 
 class AttendanceResult {
@@ -36,7 +64,7 @@ class AttendanceResult {
 class AttendanceService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// Mengambil profil perusahaan (nama dan logo) dari tabel `settings`
+  /// Mengambil profil perusahaan (nama, logo, primary_color) dari tabel `settings`
   Future<Map<String, String?>> fetchCompanyProfile() async {
     try {
       final List<dynamic> data = await _supabase
@@ -77,8 +105,45 @@ class AttendanceService {
     }
   }
 
+  /// Mengambil daftar seluruh cabang / lokasi kantor aktif dari tabel `lokasi_kantor`
+  Future<List<OfficeLocation>> fetchLocations() async {
+    try {
+      final List<dynamic> data = await _supabase
+          .from('lokasi_kantor')
+          .select('lokasi_id, nama_kantor, latitude, longitude, radius_meter')
+          .order('lokasi_id', ascending: true);
+
+      if (data.isNotEmpty) {
+        return data.map((e) => OfficeLocation.fromJson(e)).toList();
+      }
+    } catch (e) {
+      debugPrint('Error fetchLocations: $e');
+    }
+
+    // Fallback default cabang kantor
+    return [
+      OfficeLocation(
+        id: 1,
+        name: 'Kantor Sulaksana',
+        latitude: -6.910194028769816,
+        longitude: 107.65072801284482,
+        radiusMeter: 100,
+      ),
+      OfficeLocation(
+        id: 2,
+        name: 'Kantor Cikawao',
+        latitude: -6.927558090870104,
+        longitude: 107.61457005582317,
+        radiusMeter: 100,
+      ),
+    ];
+  }
+
   /// Memproses presensi kartu NFC
-  Future<AttendanceResult> processNfcTap(String nfcSerialNumber) async {
+  Future<AttendanceResult> processNfcTap(
+    String nfcSerialNumber, {
+    OfficeLocation? selectedLocation,
+  }) async {
     // 1. Identifikasi kartu di tabel `nfc`
     final nfcData = await _supabase
         .from('nfc')
@@ -154,6 +219,8 @@ class AttendanceService {
         'skema_kerja': 'WFO',
         'status_kehadiran': 'Hadir',
         if (jadwalId != null) 'jadwal_id': jadwalId,
+        if (selectedLocation?.latitude != null) 'latitude': selectedLocation!.latitude,
+        if (selectedLocation?.longitude != null) 'longitude': selectedLocation!.longitude,
       };
 
       await _supabase.from('absensi').insert(insertPayload);
@@ -178,7 +245,11 @@ class AttendanceService {
 
       await _supabase
           .from('absensi')
-          .update({'jam_checkout': now.toIso8601String()})
+          .update({
+            'jam_checkout': now.toIso8601String(),
+            if (selectedLocation?.latitude != null) 'latitude': selectedLocation!.latitude,
+            if (selectedLocation?.longitude != null) 'longitude': selectedLocation!.longitude,
+          })
           .eq('absensi_id', existingAttendance['absensi_id']);
 
       return AttendanceResult(
