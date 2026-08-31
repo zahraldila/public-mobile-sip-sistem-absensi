@@ -253,8 +253,8 @@ class AttendanceService {
           .from('absensi')
           .update({
             'jam_checkout': now.toIso8601String(),
-            if (currentLatitude != null) 'latitude': currentLatitude,
-            if (currentLongitude != null) 'longitude': currentLongitude,
+            if (currentLatitude != null) 'latitude_checkout': currentLatitude,
+            if (currentLongitude != null) 'longitude_checkout': currentLongitude,
           })
           .eq('absensi_id', existingAttendance['absensi_id']);
 
