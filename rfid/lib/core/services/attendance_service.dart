@@ -202,9 +202,12 @@ class AttendanceService {
         .limit(1)
         .maybeSingle();
 
-    // 4. Tentukan Alur Transaksi (Check In / Check Out / Selesai)
-    if (existingAttendance == null) {
-      // KONDISI 1: Belum ada absensi hari ini -> Lakukan CHECK IN (INSERT)
+    final String branchName = selectedLocation?.name ?? 'Kantor';
+
+    // 4. Tentukan Alur Transaksi Multi-Session (Check In / Check Out Berulang)
+    if (existingAttendance == null || existingAttendance['jam_checkout'] != null) {
+      // KONDISI 1: Belum ada absensi hari ini ATAU sesi sebelumnya sudah check-out
+      // -> Lakukan CHECK-IN SESI BARU (INSERT)
       int? jadwalId;
       try {
         final jadwal = await _supabase
@@ -218,12 +221,16 @@ class AttendanceService {
         }
       } catch (_) {}
 
+      final String checkInNote =
+          'Check-in via Public Mobile App di $branchName (UID NFC: $nfcSerialNumber)';
+
       final insertPayload = {
         'pegawai_id': pegawaiId,
         'tanggal_absensi': todayDateIso,
         'jam_checkin': now.toIso8601String(),
         'skema_kerja': 'WFO',
         'status_kehadiran': 'Hadir',
+        'catatan': checkInNote,
         if (jadwalId != null) 'jadwal_id': jadwalId,
         if (currentLatitude != null) 'latitude': currentLatitude,
         if (currentLongitude != null) 'longitude': currentLongitude,
@@ -240,19 +247,25 @@ class AttendanceService {
         checkInDate: todayFormatted,
         workScheme: 'WFO',
       );
-    } else if (existingAttendance['jam_checkout'] == null) {
-      // KONDISI 2: Sudah Check In, belum Check Out -> Lakukan CHECK OUT (UPDATE)
+    } else {
+      // KONDISI 2: Sedang ada sesi aktif yang belum check-out (jam_checkout masih NULL)
+      // -> Lakukan CHECK-OUT PADA SESI TERSEBUT (UPDATE)
       final DateTime checkInDateTime = DateTime.tryParse(
             existingAttendance['jam_checkin']?.toString() ?? '',
           ) ??
           now;
 
       final durationText = DateTimeHelper.calculateDuration(checkInDateTime, now);
+      final String existingNote = existingAttendance['catatan']?.toString() ??
+          'Check-in via Public Mobile App';
+      final String checkOutNote =
+          '$existingNote | Check-out via Public Mobile App di $branchName (Durasi: $durationText)';
 
       await _supabase
           .from('absensi')
           .update({
             'jam_checkout': now.toIso8601String(),
+            'catatan': checkOutNote,
             if (currentLatitude != null) 'latitude_checkout': currentLatitude,
             if (currentLongitude != null) 'longitude_checkout': currentLongitude,
           })
@@ -268,21 +281,6 @@ class AttendanceService {
         checkInDate: todayFormatted,
         duration: durationText,
         workScheme: existingAttendance['skema_kerja']?.toString() ?? 'WFO',
-      );
-    } else {
-      // KONDISI 3: Sudah Check In dan Sudah Check Out hari ini
-      return AttendanceResult(
-        status: AttendanceStatus.alreadyCompleted,
-        employeeName: employeeName,
-        employeeId: employeeNip,
-        profileImageUrl: profileImageUrl,
-        checkInTime: DateTimeHelper.formatTime(
-          DateTime.tryParse(existingAttendance['jam_checkin']?.toString() ?? '') ?? now,
-        ),
-        checkOutTime: DateTimeHelper.formatTime(
-          DateTime.tryParse(existingAttendance['jam_checkout']?.toString() ?? '') ?? now,
-        ),
-        checkInDate: todayFormatted,
       );
     }
   }
