@@ -107,6 +107,10 @@ class TtsService {
     await speak('Koneksi internet tidak tersedia. Silakan periksa jaringan Anda.');
   }
 
+  Future<void> speakEmployeeFetchFailed() async {
+    await speak('Data pegawai gagal diperoleh, silakan coba lagi.');
+  }
+
   Future<void> stop() async {
     try {
       await _flutterTts.stop();

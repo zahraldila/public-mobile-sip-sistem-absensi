@@ -170,11 +170,17 @@ class AttendanceService {
     final int pegawaiId = int.parse(nfcData['pegawai_id'].toString());
 
     // 2. Ambil data profil pegawai dari tabel `pegawai`
-    final pegawaiData = await _supabase
-        .from('pegawai')
-        .select('pegawai_id, nama_pegawai, nip, status, foto_profile')
-        .eq('pegawai_id', pegawaiId)
-        .maybeSingle();
+    dynamic pegawaiData;
+    try {
+      pegawaiData = await _supabase
+          .from('pegawai')
+          .select('pegawai_id, nama_pegawai, nip, status, foto_profile')
+          .eq('pegawai_id', pegawaiId)
+          .maybeSingle();
+    } catch (e) {
+      debugPrint('Error query pegawai: $e');
+      throw Exception('Data pegawai gagal diperoleh, silakan coba lagi');
+    }
 
     if (pegawaiData == null) {
       throw Exception('Data pegawai ($nfcSerialNumber) tidak ditemukan');

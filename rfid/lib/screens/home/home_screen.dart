@@ -313,19 +313,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (e) {
       debugPrint('Error proses absensi: $e');
       if (mounted) {
-        final errorMsg = e.toString().replaceAll('Exception:', '').trim();
-        final bool isNoInternet = errorMsg.contains('SocketException') ||
-            errorMsg.contains('ClientException') ||
-            errorMsg.toLowerCase().contains('failed host lookup') ||
-            errorMsg.toLowerCase().contains('network') ||
-            errorMsg.toLowerCase().contains('connection') ||
-            errorMsg.toLowerCase().contains('koneksi internet') ||
-            errorMsg.toLowerCase().contains('koneksi terputus');
+        final rawError = e.toString().replaceAll('Exception:', '').trim();
+        final bool isNoInternet = rawError.contains('SocketException') ||
+            rawError.contains('ClientException') ||
+            rawError.toLowerCase().contains('failed host lookup') ||
+            rawError.toLowerCase().contains('network') ||
+            rawError.toLowerCase().contains('connection') ||
+            rawError.toLowerCase().contains('koneksi internet') ||
+            rawError.toLowerCase().contains('koneksi terputus');
         final bool isGpsDisabled = e is LocationDisabledException ||
-            errorMsg.contains('Location belum aktif') ||
-            errorMsg.toLowerCase().contains('location belum aktif');
+            rawError.contains('Location belum aktif') ||
+            rawError.toLowerCase().contains('location belum aktif');
         final bool isPermissionDenied = e is LocationPermissionDeniedException ||
-            errorMsg.contains('Izin akses lokasi');
+            rawError.contains('Izin akses lokasi');
+        final bool isCardNotFound = rawError.contains('tidak terdaftar');
+        final bool isInactiveAccount = rawError.contains('tidak aktif');
+        final bool isEmployeeFetchError = rawError.contains('Data pegawai') ||
+            rawError.contains('gagal diperoleh') ||
+            rawError.contains('tidak ditemukan') ||
+            rawError.contains('PostgrestException') ||
+            rawError.contains('PGRST');
+
+        String displayMsg = rawError;
 
         if (isNoInternet) {
           _ttsService.speakNoInternet();
@@ -337,13 +346,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           return;
         } else if (isPermissionDenied) {
           _ttsService.speak('Izin akses lokasi belum diberikan.');
-        } else if (errorMsg.contains('tidak aktif')) {
+          displayMsg = 'Izin akses lokasi belum diberikan pada perangkat.';
+        } else if (isInactiveAccount) {
           _ttsService.speakInactiveAccount();
-        } else if (errorMsg.contains('tidak terdaftar') ||
-            errorMsg.contains('tidak ditemukan')) {
+          displayMsg = 'Akun pegawai tidak aktif. Presensi ditolak.';
+        } else if (isCardNotFound) {
           _ttsService.speakCardNotFound();
+          displayMsg = rawError;
+        } else if (isEmployeeFetchError) {
+          _ttsService.speakEmployeeFetchFailed();
+          displayMsg = 'Data pegawai gagal diperoleh, silakan coba lagi.';
         } else {
           _ttsService.speak('Gagal memproses absensi.');
+          displayMsg = 'Gagal memproses absensi. Silakan coba lagi.';
         }
 
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -363,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    errorMsg,
+                    displayMsg,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
