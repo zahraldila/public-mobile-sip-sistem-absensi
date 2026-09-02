@@ -48,6 +48,7 @@ class AttendanceResult {
   final String checkInDate;
   final String? duration;
   final String workScheme;
+  final String? nfcSerialNumber;
 
   AttendanceResult({
     required this.status,
@@ -59,6 +60,7 @@ class AttendanceResult {
     required this.checkInDate,
     this.duration,
     this.workScheme = 'WFO',
+    this.nfcSerialNumber,
   });
 }
 
@@ -162,7 +164,7 @@ class AttendanceService {
         .maybeSingle();
 
     if (nfcData == null || nfcData['pegawai_id'] == null) {
-      throw Exception('Kartu NFC tidak terdaftar');
+      throw Exception('Kartu ($nfcSerialNumber) tidak terdaftar');
     }
 
     final int pegawaiId = int.parse(nfcData['pegawai_id'].toString());
@@ -175,13 +177,13 @@ class AttendanceService {
         .maybeSingle();
 
     if (pegawaiData == null) {
-      throw Exception('Data pegawai tidak ditemukan');
+      throw Exception('Data pegawai ($nfcSerialNumber) tidak ditemukan');
     }
 
     // Validasi apakah akun pegawai berstatus Aktif
     final String? employeeStatus = pegawaiData['status']?.toString().trim();
     if (employeeStatus == null || employeeStatus.toLowerCase() != 'aktif') {
-      throw Exception('Akun pegawai tidak aktif. Presensi ditolak.');
+      throw Exception('Akun pegawai kartu ($nfcSerialNumber) tidak aktif. Presensi ditolak.');
     }
 
     final String employeeName = pegawaiData['nama_pegawai']?.toString() ?? 'Pegawai';
@@ -255,6 +257,7 @@ class AttendanceService {
         checkInTime: currentTimeFormatted,
         checkInDate: todayFormatted,
         workScheme: 'WFO',
+        nfcSerialNumber: nfcSerialNumber,
       );
     } else {
       // KONDISI 2: Sedang ada sesi aktif yang belum check-out (jam_checkout masih NULL)
@@ -290,6 +293,7 @@ class AttendanceService {
         checkInDate: todayFormatted,
         duration: durationText,
         workScheme: existingAttendance['skema_kerja']?.toString() ?? 'WFO',
+        nfcSerialNumber: nfcSerialNumber,
       );
     }
   }

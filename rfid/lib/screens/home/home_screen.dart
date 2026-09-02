@@ -238,6 +238,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       if (!mounted) return;
 
+      debugPrint('[NFC SCAN] Converted Hex UID: $nfcSerialNumber');
+
       if (result.status == AttendanceStatus.checkInSuccess) {
         // 1. Putar Suara Check-In
         _ttsService.speakCheckIn(result.employeeName);
@@ -253,6 +255,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               checkInDate: result.checkInDate,
               status: result.workScheme,
               profileImageUrl: result.profileImageUrl,
+              nfcSerialNumber: result.nfcSerialNumber ?? nfcSerialNumber,
             ),
           ),
         );
@@ -271,6 +274,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               checkOutTime: result.checkOutTime ?? '-',
               duration: result.duration ?? '-',
               profileImageUrl: result.profileImageUrl,
+              nfcSerialNumber: result.nfcSerialNumber ?? nfcSerialNumber,
             ),
           ),
         );

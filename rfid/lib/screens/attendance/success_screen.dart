@@ -8,6 +8,7 @@ class SuccessScreen extends StatefulWidget {
   final String checkInDate;
   final String status;
   final String? profileImageUrl;
+  final String? nfcSerialNumber;
 
   const SuccessScreen({
     super.key,
@@ -17,6 +18,7 @@ class SuccessScreen extends StatefulWidget {
     required this.checkInDate,
     required this.status,
     this.profileImageUrl,
+    this.nfcSerialNumber,
   });
 
   @override
@@ -174,7 +176,35 @@ class _SuccessScreenState extends State<SuccessScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    if (widget.nfcSerialNumber != null && widget.nfcSerialNumber!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.nfc_rounded, size: 13, color: Color(0xFF64748B)),
+                            const SizedBox(width: 5),
+                            Text(
+                              'UID NFC: ${widget.nfcSerialNumber}',
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF334155),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
                     // Garis Pemisah
                     Divider(color: Colors.grey.shade200, height: 1),
                     const SizedBox(height: 16),

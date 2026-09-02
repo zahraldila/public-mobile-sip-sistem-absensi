@@ -8,6 +8,7 @@ class CheckoutSuccessScreen extends StatefulWidget {
   final String checkOutTime;
   final String duration;
   final String? profileImageUrl;
+  final String? nfcSerialNumber;
 
   const CheckoutSuccessScreen({
     super.key,
@@ -17,6 +18,7 @@ class CheckoutSuccessScreen extends StatefulWidget {
     required this.checkOutTime,
     required this.duration,
     this.profileImageUrl,
+    this.nfcSerialNumber,
   });
 
   @override
@@ -154,6 +156,34 @@ class _CheckoutSuccessScreenState extends State<CheckoutSuccessScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (widget.nfcSerialNumber != null && widget.nfcSerialNumber!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.nfc_rounded, size: 13, color: Color(0xFF64748B)),
+                            const SizedBox(width: 5),
+                            Text(
+                              'UID NFC: ${widget.nfcSerialNumber}',
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF334155),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     // Badge Selesai
                     Container(
