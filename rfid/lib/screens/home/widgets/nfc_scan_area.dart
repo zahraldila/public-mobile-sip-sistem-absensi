@@ -4,6 +4,7 @@ import '../../../core/utils/color_helper.dart';
 class NfcScanArea extends StatefulWidget {
   final bool isProcessing;
   final bool isOnline;
+  final bool isNfcAvailable;
   final VoidCallback? onSimulateTap;
   final Color primaryColor;
 
@@ -11,6 +12,7 @@ class NfcScanArea extends StatefulWidget {
     super.key,
     required this.isProcessing,
     this.isOnline = true,
+    this.isNfcAvailable = true,
     this.onSimulateTap,
     this.primaryColor = const Color(0xFF0891B2),
   });
@@ -59,43 +61,27 @@ class _NfcScanAreaState extends State<NfcScanArea>
     final primaryColor = widget.primaryColor;
     final darkerPrimaryColor = ColorHelper.getDarkerColor(primaryColor, 0.75);
 
-    return GestureDetector(
-      onTap: widget.isProcessing ? null : widget.onSimulateTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(36),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withOpacity(0.04),
-              blurRadius: 36,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        ),
+    return Center(
+      child: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Target Sensor Medallion RFID (Dinamis Sesuai primary_color)
-            SizedBox(
-              width: 180,
-              height: 180,
+            // Container Sentuh untuk Simulasi (Berguna untuk testing di Emulator/Device)
+            GestureDetector(
+              onTap: widget.onSimulateTap,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Gelombang Ripple Halus (Dinamis)
-                  if (!widget.isProcessing)
+                  // Gelombang Ripple Animasi Dinamis (Hanya aktif jika NFC tersedia & tidak sedang proses)
+                  if (!widget.isProcessing && widget.isNfcAvailable)
                     AnimatedBuilder(
                       animation: _pulseController,
                       builder: (context, child) {
                         return Transform.scale(
                           scale: _scaleAnimation.value,
                           child: Container(
-                            width: 140,
-                            height: 140,
+                            width: 170,
+                            height: 170,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: primaryColor
@@ -120,6 +106,7 @@ class _NfcScanAreaState extends State<NfcScanArea>
                     ),
                   ),
 
+                  // Cincin Tengah Halus (Soft Halo Dinamis)
                   // Cincin Tengah Halus (Soft Halo Dinamis)
                   Container(
                     width: 120,
@@ -157,8 +144,10 @@ class _NfcScanAreaState extends State<NfcScanArea>
                               strokeWidth: 3,
                             ),
                           )
-                        : const Icon(
-                            Icons.contactless,
+                        : Icon(
+                            widget.isNfcAvailable
+                                ? Icons.contactless
+                                : Icons.nfc_rounded,
                             color: Colors.white,
                             size: 48,
                           ),
@@ -169,9 +158,9 @@ class _NfcScanAreaState extends State<NfcScanArea>
             const SizedBox(height: 32),
 
             // Judul Panduan Tegas & Berkelas
-            const Text(
-              'TEMPELKAN KARTU NFC',
-              style: TextStyle(
+            Text(
+              widget.isNfcAvailable ? 'TEMPELKAN KARTU NFC' : 'NFC TIDAK DIDUKUNG',
+              style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w900,
                 color: Color(0xFF0F172A),
@@ -181,9 +170,11 @@ class _NfcScanAreaState extends State<NfcScanArea>
             const SizedBox(height: 6),
 
             // Subtitle Deskriptif
-            const Text(
-              'Dekatkan ID Card / RFID ke area sensor',
-              style: TextStyle(
+            Text(
+              widget.isNfcAvailable
+                  ? 'Dekatkan ID Card / RFID ke area sensor'
+                  : 'Perangkat ini tidak memiliki fitur sensor NFC',
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF64748B),
@@ -191,22 +182,26 @@ class _NfcScanAreaState extends State<NfcScanArea>
             ),
             const SizedBox(height: 28),
 
-            // Badge Status Siap Scan (Emerald saat online, Merah saat offline)
+            // Badge Status Siap Scan (Disesuaikan dengan Dynamic Theming)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
               decoration: BoxDecoration(
                 color: widget.isProcessing
                     ? const Color(0xFFF1F5F9)
-                    : (!widget.isOnline
-                        ? const Color(0xFFFEF2F2)
-                        : const Color(0xFFECFDF5)),
+                    : (!widget.isNfcAvailable
+                        ? primaryColor.withOpacity(0.08)
+                        : (!widget.isOnline
+                            ? const Color(0xFFFEF2F2)
+                            : const Color(0xFFECFDF5))),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
                   color: widget.isProcessing
                       ? const Color(0xFFCBD5E1)
-                      : (!widget.isOnline
-                          ? const Color(0xFFFECACA)
-                          : const Color(0xFFA7F3D0)),
+                      : (!widget.isNfcAvailable
+                          ? primaryColor.withOpacity(0.30)
+                          : (!widget.isOnline
+                              ? const Color(0xFFFECACA)
+                              : const Color(0xFFA7F3D0))),
                   width: 1.2,
                 ),
               ),
@@ -219,9 +214,11 @@ class _NfcScanAreaState extends State<NfcScanArea>
                     decoration: BoxDecoration(
                       color: widget.isProcessing
                           ? Colors.grey.shade500
-                          : (!widget.isOnline
-                              ? const Color(0xFFDC2626)
-                              : const Color(0xFF059669)),
+                          : (!widget.isNfcAvailable
+                              ? primaryColor
+                              : (!widget.isOnline
+                                  ? const Color(0xFFDC2626)
+                                  : const Color(0xFF059669))),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -229,15 +226,21 @@ class _NfcScanAreaState extends State<NfcScanArea>
                   Text(
                     widget.isProcessing
                         ? 'MEMPROSES...'
-                        : (!widget.isOnline ? 'KONEKSI TERPUTUS' : 'READY TO SCAN'),
+                        : (!widget.isNfcAvailable
+                            ? 'NFC TIDAK DIDUKUNG'
+                            : (!widget.isOnline
+                                ? 'KONEKSI TERPUTUS'
+                                : 'READY TO SCAN')),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: widget.isProcessing
                           ? Colors.grey.shade700
-                          : (!widget.isOnline
-                              ? const Color(0xFF991B1B)
-                              : const Color(0xFF065F46)),
+                          : (!widget.isNfcAvailable
+                              ? primaryColor
+                              : (!widget.isOnline
+                                  ? const Color(0xFF991B1B)
+                                  : const Color(0xFF065F46))),
                       letterSpacing: 0.8,
                     ),
                   ),

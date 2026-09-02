@@ -39,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription<List<OfficeLocation>>? _locationSubscription;
   bool _isOnline = true;
   StreamSubscription<bool>? _networkSubscription;
+  bool _isNfcAvailable = true;
 
   // Double-scan protection flag
   bool _isProcessing = false;
@@ -121,7 +122,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _initNfcListener() async {
     try {
       final isAvailable = await NfcManager.instance.isAvailable();
-      if (!isAvailable) return;
+      if (mounted) {
+        setState(() {
+          _isNfcAvailable = isAvailable;
+        });
+      }
+      if (!isAvailable) {
+        debugPrint('NFC hardware tidak tersedia pada perangkat ini');
+        return;
+      }
 
       NfcManager.instance.startSession(
         pollingOptions: {
@@ -151,6 +160,11 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     } catch (e) {
       debugPrint('Error inisialisasi NFC Session: $e');
+      if (mounted) {
+        setState(() {
+          _isNfcAvailable = false;
+        });
+      }
     }
   }
 
@@ -591,10 +605,26 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 22.0, vertical: 18.0),
             child: Column(
               children: [
-                // Banner Peringatan Offline (Sangat Jelas & Elegan)
+                // Header Perusahaan dengan Badge Cabang Terpilih (Paling Atas)
+                CompanyHeader(
+                  companyName: _companyName,
+                  logoUrl: _logoUrl,
+                  isLoading: _isLoadingProfile,
+                  primaryColor: _primaryColor,
+                  trailing: LocationPickerBadge(
+                    locations: _locations,
+                    selectedLocation: _selectedLocation,
+                    primaryColor: _primaryColor,
+                    onLocationChanged: (newLoc) {
+                      setState(() => _selectedLocation = newLoc);
+                    },
+                  ),
+                ),
+
+                // Banner Peringatan Offline (Di Bawah Header)
                 if (!_isOnline)
                   Container(
-                    margin: const EdgeInsets.only(bottom: 12),
+                    margin: const EdgeInsets.only(top: 14),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFEF2F2),
@@ -619,21 +649,33 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                // Header Perusahaan dengan Badge Cabang Terpilih
-                CompanyHeader(
-                  companyName: _companyName,
-                  logoUrl: _logoUrl,
-                  isLoading: _isLoadingProfile,
-                  primaryColor: _primaryColor,
-                  trailing: LocationPickerBadge(
-                    locations: _locations,
-                    selectedLocation: _selectedLocation,
-                    primaryColor: _primaryColor,
-                    onLocationChanged: (newLoc) {
-                      setState(() => _selectedLocation = newLoc);
-                    },
+                // Banner Peringatan NFC Tidak Didukung (Di Bawah Header dengan Dynamic Theming)
+                if (!_isNfcAvailable)
+                  Container(
+                    margin: const EdgeInsets.only(top: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: _primaryColor.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _primaryColor.withOpacity(0.25), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.nfc_rounded, color: _primaryColor, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Perangkat tidak mendukung NFC. Absensi kartu tidak tersedia.',
+                            style: TextStyle(
+                              color: _primaryColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
 
                 const Spacer(flex: 1),
 
@@ -651,6 +693,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: NfcScanArea(
                     isProcessing: _isProcessing,
                     isOnline: _isOnline,
+                    isNfcAvailable: _isNfcAvailable,
                     primaryColor: _primaryColor,
                     onSimulateTap: () {
                       _handleNfcAttendance('SIMULASI_ID');
