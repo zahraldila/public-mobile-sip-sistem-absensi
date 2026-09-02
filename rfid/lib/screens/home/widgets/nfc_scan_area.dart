@@ -159,7 +159,7 @@ class _NfcScanAreaState extends State<NfcScanArea>
 
             // Judul Panduan Tegas & Berkelas
             Text(
-              widget.isNfcAvailable ? 'TEMPELKAN KARTU NFC' : 'NFC TIDAK DIDUKUNG',
+              widget.isNfcAvailable ? 'TEMPELKAN KARTU NFC' : 'NFC BELUM AKTIF',
               style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w900,
@@ -173,7 +173,7 @@ class _NfcScanAreaState extends State<NfcScanArea>
             Text(
               widget.isNfcAvailable
                   ? 'Dekatkan ID Card / RFID ke area sensor'
-                  : 'Perangkat ini tidak memiliki fitur sensor NFC',
+                  : 'Silakan aktifkan fitur NFC untuk melakukan absensi',
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -227,7 +227,7 @@ class _NfcScanAreaState extends State<NfcScanArea>
                     widget.isProcessing
                         ? 'MEMPROSES...'
                         : (!widget.isNfcAvailable
-                            ? 'NFC TIDAK DIDUKUNG'
+                            ? 'NFC BELUM AKTIF'
                             : (!widget.isOnline
                                 ? 'KONEKSI TERPUTUS'
                                 : 'READY TO SCAN')),

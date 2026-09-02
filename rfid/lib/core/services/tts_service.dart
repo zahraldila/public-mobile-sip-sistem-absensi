@@ -99,6 +99,10 @@ class TtsService {
     await speak('Location belum aktif. Silakan aktifkan Location untuk melakukan absensi.');
   }
 
+  Future<void> speakNfcDisabled() async {
+    await speak('NFC belum aktif, silakan aktifkan NFC untuk melakukan absensi.');
+  }
+
   Future<void> speakNoInternet() async {
     await speak('Koneksi internet tidak tersedia. Silakan periksa jaringan Anda.');
   }

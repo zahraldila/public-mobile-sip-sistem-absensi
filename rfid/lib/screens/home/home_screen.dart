@@ -22,7 +22,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final AttendanceService _attendanceService = AttendanceService();
   final TtsService _ttsService = TtsService();
 
@@ -50,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _timeStream = Stream.periodic(
       const Duration(seconds: 1),
       (_) => DateTime.now(),
@@ -128,7 +129,13 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
       if (!isAvailable) {
-        debugPrint('NFC hardware tidak tersedia pada perangkat ini');
+        debugPrint('NFC hardware tidak aktif / tersedia pada perangkat ini');
+        // Otomatis bunyikan suara peringatan sekali saat mendeteksi status NFC OFF
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted && !_isNfcAvailable) {
+            _ttsService.speakNfcDisabled();
+          }
+        });
         return;
       }
 
@@ -169,7 +176,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _initNfcListener();
+      _checkInitialNetwork();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _locationSubscription?.cancel();
     _networkSubscription?.cancel();
     NfcManager.instance.stopSession();
@@ -569,6 +585,89 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Menampilkan dialog peringatan ketika NFC dalam kondisi OFF / tidak aktif
+  void _showNfcDisabledAlert() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: _primaryColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _primaryColor.withOpacity(0.25),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  Icons.nfc_rounded,
+                  color: _primaryColor,
+                  size: 34,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'NFC Belum Aktif',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.3,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'NFC belum aktif. Silakan aktifkan NFC pada pengaturan perangkat Anda untuk melakukan absensi.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Mengerti',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 1. TAMPILAN AWAL: Jika lokasi cabang belum dipilih, tampilkan layar pemilihan cabang
@@ -649,7 +748,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                // Banner Peringatan NFC Tidak Didukung (Di Bawah Header dengan Dynamic Theming)
+                // Banner Peringatan NFC Belum Aktif (Di Bawah Header dengan Dynamic Theming)
                 if (!_isNfcAvailable)
                   Container(
                     margin: const EdgeInsets.only(top: 14),
@@ -665,7 +764,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Perangkat tidak mendukung NFC. Absensi kartu tidak tersedia.',
+                            'NFC belum aktif. Silakan aktifkan NFC untuk melakukan absensi.',
                             style: TextStyle(
                               color: _primaryColor,
                               fontWeight: FontWeight.w700,
@@ -696,6 +795,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     isNfcAvailable: _isNfcAvailable,
                     primaryColor: _primaryColor,
                     onSimulateTap: () {
+                      if (!_isNfcAvailable) {
+                        _ttsService.speakNfcDisabled();
+                        if (mounted) {
+                          _showNfcDisabledAlert();
+                        }
+                        return;
+                      }
                       _handleNfcAttendance('SIMULASI_ID');
                     },
                   ),
