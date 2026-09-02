@@ -187,8 +187,8 @@ class AttendanceService {
     final String todayFormatted = DateTimeHelper.formatDateIndonesian(now);
     final String currentTimeFormatted = DateTimeHelper.formatTime(now);
 
-    // Ambil koordinat GPS nyata dari sensor perangkat saat ini (dengan fallback ke cabang terpilih)
-    final deviceGps = await LocationService.getCurrentPosition();
+    // Validasi & Ambil koordinat GPS nyata dari sensor perangkat saat ini (Wajib GPS Aktif)
+    final deviceGps = await LocationService.getCurrentPosition(strict: true);
     final double? currentLatitude = deviceGps?.latitude ?? selectedLocation?.latitude;
     final double? currentLongitude = deviceGps?.longitude ?? selectedLocation?.longitude;
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 
 import '../../core/services/attendance_service.dart';
+import '../../core/services/location_service.dart';
 import '../../core/services/tts_service.dart';
 import '../../core/utils/color_helper.dart';
 import '../attendance/checkout_success_screen.dart';
@@ -136,6 +137,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (_isProcessing) return;
 
+    // 1. CEK STATUS GPS TERLEBIH DAHULU (Wajib Aktif)
+    final bool isGpsOn = await LocationService.isLocationEnabled();
+    if (!isGpsOn) {
+      _ttsService.speakLocationDisabled();
+      if (mounted) {
+        _showLocationDisabledAlert();
+      }
+      return;
+    }
+
     _cardCooldowns[nfcSerialNumber] = now;
     setState(() => _isProcessing = true);
 
@@ -219,7 +230,17 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('Error proses absensi: $e');
       if (mounted) {
         final errorMsg = e.toString().replaceAll('Exception:', '').trim();
-        if (errorMsg.contains('tidak aktif')) {
+        final bool isGpsDisabled = e is LocationDisabledException ||
+            errorMsg.contains('Location belum aktif') ||
+            errorMsg.toLowerCase().contains('location belum aktif');
+        final bool isPermissionDenied = e is LocationPermissionDeniedException ||
+            errorMsg.contains('Izin akses lokasi');
+
+        if (isGpsDisabled) {
+          _ttsService.speakLocationDisabled();
+        } else if (isPermissionDenied) {
+          _ttsService.speak('Izin akses lokasi belum diberikan.');
+        } else if (errorMsg.contains('tidak aktif')) {
           _ttsService.speakInactiveAccount();
         } else if (errorMsg.contains('tidak terdaftar') ||
             errorMsg.contains('tidak ditemukan')) {
@@ -228,16 +249,20 @@ class _HomeScreenState extends State<HomeScreen> {
           _ttsService.speak('Gagal memproses absensi.');
         }
 
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF0F172A),
+            backgroundColor: isGpsDisabled ? const Color(0xFFD97706) : const Color(0xFF0F172A),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            duration: const Duration(seconds: 3),
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            duration: const Duration(seconds: 4),
             content: Row(
               children: [
-                const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
+                Icon(
+                  isGpsDisabled ? Icons.location_off_rounded : Icons.error_outline_rounded,
+                  color: isGpsDisabled ? Colors.white : const Color(0xFFEF4444),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -249,17 +274,139 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+                if (isGpsDisabled) ...[
+                  const SizedBox(width: 8),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFFD97706),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () {
+                      LocationService.openLocationSettings();
+                    },
+                    child: const Text(
+                      'Aktifkan',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         );
-        await Future.delayed(const Duration(seconds: 3));
+        await Future.delayed(const Duration(seconds: 4));
       }
     } finally {
       if (mounted) {
         setState(() => _isProcessing = false);
       }
     }
+  }
+
+  /// Menampilkan dialog peringatan ketika GPS / Location dalam kondisi OFF
+  void _showLocationDisabledAlert() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Lingkaran Ikon dengan Sentuhan Tema Dinamis
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: _primaryColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _primaryColor.withOpacity(0.25),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  Icons.location_off_rounded,
+                  color: _primaryColor,
+                  size: 34,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Location Belum Aktif',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.3,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Location belum aktif. Silakan aktifkan Location untuk melakukan absensi.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // Tombol Aksi Utama dengan Warna Brand Dinamis
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    LocationService.openLocationSettings();
+                  },
+                  icon: const Icon(Icons.settings_rounded, size: 18),
+                  label: const Text(
+                    'Aktifkan Location',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF64748B),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Tutup',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override

@@ -95,6 +95,10 @@ class TtsService {
     await speak('Akun pegawai tidak aktif. Silakan hubungi administrator.');
   }
 
+  Future<void> speakLocationDisabled() async {
+    await speak('Location belum aktif. Silakan aktifkan Location untuk melakukan absensi.');
+  }
+
   Future<void> stop() async {
     try {
       await _flutterTts.stop();
