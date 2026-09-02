@@ -204,10 +204,13 @@ class AttendanceService {
     final String todayFormatted = DateTimeHelper.formatDateIndonesian(now);
     final String currentTimeFormatted = DateTimeHelper.formatTime(now);
 
-    // Validasi & Ambil koordinat GPS nyata dari sensor perangkat saat ini (Wajib GPS Aktif)
+    // Validasi & Ambil koordinat GPS nyata dari sensor perangkat saat ini (Wajib GPS Nyata)
     final deviceGps = await LocationService.getCurrentPosition(strict: true);
-    final double? currentLatitude = deviceGps?.latitude ?? selectedLocation?.latitude;
-    final double? currentLongitude = deviceGps?.longitude ?? selectedLocation?.longitude;
+    if (deviceGps == null) {
+      throw Exception('Gagal mendapatkan koordinat lokasi perangkat. Silakan coba lagi.');
+    }
+    final double currentLatitude = deviceGps.latitude;
+    final double currentLongitude = deviceGps.longitude;
 
     // 3. Cek sesi absensi pada HARI INI (ambil sesi terbaru)
     final existingAttendance = await _supabase
@@ -248,9 +251,9 @@ class AttendanceService {
         'skema_kerja': 'WFO',
         'status_kehadiran': 'Hadir',
         'catatan': checkInNote,
+        'latitude': currentLatitude,
+        'longitude': currentLongitude,
         if (jadwalId != null) 'jadwal_id': jadwalId,
-        if (currentLatitude != null) 'latitude': currentLatitude,
-        if (currentLongitude != null) 'longitude': currentLongitude,
       };
 
       await _supabase.from('absensi').insert(insertPayload);
@@ -284,8 +287,8 @@ class AttendanceService {
           .update({
             'jam_checkout': now.toIso8601String(),
             'catatan': checkOutNote,
-            if (currentLatitude != null) 'latitude_checkout': currentLatitude,
-            if (currentLongitude != null) 'longitude_checkout': currentLongitude,
+            'latitude_checkout': currentLatitude,
+            'longitude_checkout': currentLongitude,
           })
           .eq('absensi_id', existingAttendance['absensi_id']);
 

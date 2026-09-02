@@ -326,6 +326,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             rawError.toLowerCase().contains('location belum aktif');
         final bool isPermissionDenied = e is LocationPermissionDeniedException ||
             rawError.contains('Izin akses lokasi');
+        final bool isGpsFetchFailed = rawError.contains('Gagal mendapatkan koordinat') ||
+            rawError.contains('koordinat lokasi');
         final bool isCardNotFound = rawError.contains('tidak terdaftar');
         final bool isInactiveAccount = rawError.contains('tidak aktif');
         final bool isEmployeeFetchError = rawError.contains('Data pegawai') ||
@@ -347,6 +349,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         } else if (isPermissionDenied) {
           _ttsService.speak('Izin akses lokasi belum diberikan.');
           displayMsg = 'Izin akses lokasi belum diberikan pada perangkat.';
+        } else if (isGpsFetchFailed) {
+          _ttsService.speakLocationFetchFailed();
+          displayMsg = 'Gagal mendapatkan koordinat lokasi perangkat. Silakan coba lagi.';
         } else if (isInactiveAccount) {
           _ttsService.speakInactiveAccount();
           displayMsg = 'Akun pegawai tidak aktif. Presensi ditolak.';
