@@ -256,7 +256,12 @@ class AttendanceService {
         if (jadwalId != null) 'jadwal_id': jadwalId,
       };
 
-      await _supabase.from('absensi').insert(insertPayload);
+      try {
+        await _supabase.from('absensi').insert(insertPayload);
+      } catch (e) {
+        debugPrint('Error insert check-in: $e');
+        throw Exception('Check In gagal disimpan, silakan coba lagi');
+      }
 
       return AttendanceResult(
         status: AttendanceStatus.checkInSuccess,
@@ -282,15 +287,20 @@ class AttendanceService {
       final String checkOutNote =
           '$existingNote | Check-out via Public Mobile App di $branchName (Durasi: $durationText)';
 
-      await _supabase
-          .from('absensi')
-          .update({
-            'jam_checkout': now.toIso8601String(),
-            'catatan': checkOutNote,
-            'latitude_checkout': currentLatitude,
-            'longitude_checkout': currentLongitude,
-          })
-          .eq('absensi_id', existingAttendance['absensi_id']);
+      try {
+        await _supabase
+            .from('absensi')
+            .update({
+              'jam_checkout': now.toIso8601String(),
+              'catatan': checkOutNote,
+              'latitude_checkout': currentLatitude,
+              'longitude_checkout': currentLongitude,
+            })
+            .eq('absensi_id', existingAttendance['absensi_id']);
+      } catch (e) {
+        debugPrint('Error update check-out: $e');
+        throw Exception('Check Out gagal disimpan, silakan coba lagi');
+      }
 
       return AttendanceResult(
         status: AttendanceStatus.checkOutSuccess,

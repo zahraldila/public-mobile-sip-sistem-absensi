@@ -328,6 +328,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             rawError.contains('Izin akses lokasi');
         final bool isGpsFetchFailed = rawError.contains('Gagal mendapatkan koordinat') ||
             rawError.contains('koordinat lokasi');
+        final bool isCheckInSaveFailed = rawError.contains('Check In gagal disimpan');
+        final bool isCheckOutSaveFailed = rawError.contains('Check Out gagal disimpan');
         final bool isCardNotFound = rawError.contains('tidak terdaftar');
         final bool isInactiveAccount = rawError.contains('tidak aktif');
         final bool isEmployeeFetchError = rawError.contains('Data pegawai') ||
@@ -352,6 +354,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         } else if (isGpsFetchFailed) {
           _ttsService.speakLocationFetchFailed();
           displayMsg = 'Gagal mendapatkan koordinat lokasi perangkat. Silakan coba lagi.';
+        } else if (isCheckInSaveFailed) {
+          _ttsService.speakCheckInSaveFailed();
+          displayMsg = 'Check In gagal disimpan, silakan coba lagi.';
+        } else if (isCheckOutSaveFailed) {
+          _ttsService.speakCheckOutSaveFailed();
+          displayMsg = 'Check Out gagal disimpan, silakan coba lagi.';
         } else if (isInactiveAccount) {
           _ttsService.speakInactiveAccount();
           displayMsg = 'Akun pegawai tidak aktif. Presensi ditolak.';

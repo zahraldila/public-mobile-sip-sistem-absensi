@@ -115,6 +115,14 @@ class TtsService {
     await speak('Gagal mendapatkan koordinat lokasi perangkat, silakan coba lagi.');
   }
 
+  Future<void> speakCheckInSaveFailed() async {
+    await speak('Check In gagal disimpan, silakan coba lagi.');
+  }
+
+  Future<void> speakCheckOutSaveFailed() async {
+    await speak('Check Out gagal disimpan, silakan coba lagi.');
+  }
+
   Future<void> stop() async {
     try {
       await _flutterTts.stop();
