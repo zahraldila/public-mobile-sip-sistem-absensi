@@ -230,14 +230,27 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('Error proses absensi: $e');
       if (mounted) {
         final errorMsg = e.toString().replaceAll('Exception:', '').trim();
+        final bool isNoInternet = errorMsg.contains('SocketException') ||
+            errorMsg.contains('ClientException') ||
+            errorMsg.toLowerCase().contains('failed host lookup') ||
+            errorMsg.toLowerCase().contains('network') ||
+            errorMsg.toLowerCase().contains('connection') ||
+            errorMsg.toLowerCase().contains('koneksi internet') ||
+            errorMsg.toLowerCase().contains('koneksi terputus');
         final bool isGpsDisabled = e is LocationDisabledException ||
             errorMsg.contains('Location belum aktif') ||
             errorMsg.toLowerCase().contains('location belum aktif');
         final bool isPermissionDenied = e is LocationPermissionDeniedException ||
             errorMsg.contains('Izin akses lokasi');
 
-        if (isGpsDisabled) {
+        if (isNoInternet) {
+          _ttsService.speakNoInternet();
+          _showNoInternetAlert();
+          return;
+        } else if (isGpsDisabled) {
           _ttsService.speakLocationDisabled();
+          _showLocationDisabledAlert();
+          return;
         } else if (isPermissionDenied) {
           _ttsService.speak('Izin akses lokasi belum diberikan.');
         } else if (errorMsg.contains('tidak aktif')) {
@@ -252,16 +265,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: isGpsDisabled ? const Color(0xFFD97706) : const Color(0xFF0F172A),
+            backgroundColor: const Color(0xFF0F172A),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             duration: const Duration(seconds: 4),
             content: Row(
               children: [
-                Icon(
-                  isGpsDisabled ? Icons.location_off_rounded : Icons.error_outline_rounded,
-                  color: isGpsDisabled ? Colors.white : const Color(0xFFEF4444),
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: Color(0xFFEF4444),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -274,24 +287,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                if (isGpsDisabled) ...[
-                  const SizedBox(width: 8),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFFD97706),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: () {
-                      LocationService.openLocationSettings();
-                    },
-                    child: const Text(
-                      'Aktifkan',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -380,6 +375,107 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.settings_rounded, size: 18),
                   label: const Text(
                     'Aktifkan Location',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF64748B),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Tutup',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Menampilkan dialog peringatan ketika koneksi internet terputus
+  void _showNoInternetAlert() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Lingkaran Ikon dengan Sentuhan Tema Dinamis
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: _primaryColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _primaryColor.withOpacity(0.25),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  Icons.wifi_off_rounded,
+                  color: _primaryColor,
+                  size: 34,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Koneksi Terputus',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.3,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Koneksi internet tidak tersedia. Silakan periksa jaringan Wi-Fi atau data seluler Anda untuk melakukan absensi.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // Tombol Coba Lagi dengan Warna Brand Dinamis
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text(
+                    'Coba Lagi',
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 14,

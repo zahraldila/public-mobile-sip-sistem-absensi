@@ -99,6 +99,10 @@ class TtsService {
     await speak('Location belum aktif. Silakan aktifkan Location untuk melakukan absensi.');
   }
 
+  Future<void> speakNoInternet() async {
+    await speak('Koneksi internet tidak tersedia. Silakan periksa jaringan Anda.');
+  }
+
   Future<void> stop() async {
     try {
       await _flutterTts.stop();
