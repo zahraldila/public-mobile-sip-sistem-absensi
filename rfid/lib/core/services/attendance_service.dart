@@ -140,6 +140,15 @@ class AttendanceService {
     ];
   }
 
+  /// Stream Realtime untuk sinkronisasi otomatis cabang dari Supabase
+  Stream<List<OfficeLocation>> streamLocations() {
+    return _supabase
+        .from('lokasi_kantor')
+        .stream(primaryKey: ['lokasi_id'])
+        .order('lokasi_id', ascending: true)
+        .map((data) => data.map((e) => OfficeLocation.fromJson(e)).toList());
+  }
+
   /// Memproses presensi kartu NFC
   Future<AttendanceResult> processNfcTap(
     String nfcSerialNumber, {

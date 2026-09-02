@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/services/attendance_service.dart';
+import '../../../core/services/network_service.dart';
 
 class BranchSelectionView extends StatefulWidget {
   final String companyName;
@@ -23,6 +25,8 @@ class BranchSelectionView extends StatefulWidget {
 
 class _BranchSelectionViewState extends State<BranchSelectionView> {
   OfficeLocation? _tempSelected;
+  bool _isOnline = true;
+  StreamSubscription<bool>? _networkSubscription;
 
   @override
   void initState() {
@@ -30,6 +34,21 @@ class _BranchSelectionViewState extends State<BranchSelectionView> {
     if (widget.locations.isNotEmpty) {
       _tempSelected = widget.locations.first;
     }
+    _checkInitialNetwork();
+    _networkSubscription = NetworkService.onConnectivityChanged.listen((online) {
+      if (mounted) setState(() => _isOnline = online);
+    });
+  }
+
+  Future<void> _checkInitialNetwork() async {
+    final online = await NetworkService.hasInternetConnection();
+    if (mounted) setState(() => _isOnline = online);
+  }
+
+  @override
+  void dispose() {
+    _networkSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -203,6 +222,34 @@ class _BranchSelectionViewState extends State<BranchSelectionView> {
                       const SizedBox(height: 16),
                       const Divider(color: Color(0xFFF1F5F9), thickness: 1.2),
                       const SizedBox(height: 10),
+
+                      // Indikator Offline Halus
+                      if (!_isOnline)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.wifi_off_rounded, color: Color(0xFFDC2626), size: 16),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Perangkat offline. Menampilkan data cabang lokal.',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFFDC2626),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                       // Daftar Cabang
                       if (widget.locations.isEmpty)

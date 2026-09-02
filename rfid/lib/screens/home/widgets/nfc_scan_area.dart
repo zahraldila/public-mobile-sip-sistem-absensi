@@ -3,13 +3,15 @@ import '../../../core/utils/color_helper.dart';
 
 class NfcScanArea extends StatefulWidget {
   final bool isProcessing;
-  final VoidCallback onSimulateTap;
+  final bool isOnline;
+  final VoidCallback? onSimulateTap;
   final Color primaryColor;
 
   const NfcScanArea({
     super.key,
     required this.isProcessing,
-    required this.onSimulateTap,
+    this.isOnline = true,
+    this.onSimulateTap,
     this.primaryColor = const Color(0xFF0891B2),
   });
 
@@ -189,18 +191,22 @@ class _NfcScanAreaState extends State<NfcScanArea>
             ),
             const SizedBox(height: 28),
 
-            // Badge Status Siap Scan (Emerald Executive Pill)
+            // Badge Status Siap Scan (Emerald saat online, Merah saat offline)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
               decoration: BoxDecoration(
                 color: widget.isProcessing
                     ? const Color(0xFFF1F5F9)
-                    : const Color(0xFFECFDF5),
+                    : (!widget.isOnline
+                        ? const Color(0xFFFEF2F2)
+                        : const Color(0xFFECFDF5)),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
                   color: widget.isProcessing
                       ? const Color(0xFFCBD5E1)
-                      : const Color(0xFFA7F3D0),
+                      : (!widget.isOnline
+                          ? const Color(0xFFFECACA)
+                          : const Color(0xFFA7F3D0)),
                   width: 1.2,
                 ),
               ),
@@ -213,19 +219,25 @@ class _NfcScanAreaState extends State<NfcScanArea>
                     decoration: BoxDecoration(
                       color: widget.isProcessing
                           ? Colors.grey.shade500
-                          : const Color(0xFF059669),
+                          : (!widget.isOnline
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFF059669)),
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    widget.isProcessing ? 'MEMPROSES...' : 'READY TO SCAN',
+                    widget.isProcessing
+                        ? 'MEMPROSES...'
+                        : (!widget.isOnline ? 'KONEKSI TERPUTUS' : 'READY TO SCAN'),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: widget.isProcessing
                           ? Colors.grey.shade700
-                          : const Color(0xFF065F46),
+                          : (!widget.isOnline
+                              ? const Color(0xFF991B1B)
+                              : const Color(0xFF065F46)),
                       letterSpacing: 0.8,
                     ),
                   ),

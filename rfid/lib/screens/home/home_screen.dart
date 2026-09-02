@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 
 import '../../core/services/attendance_service.dart';
 import '../../core/services/location_service.dart';
+import '../../core/services/network_service.dart';
 import '../../core/services/tts_service.dart';
 import '../../core/utils/color_helper.dart';
 import '../attendance/checkout_success_screen.dart';
@@ -34,6 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Daftar Cabang / Lokasi Kantor Dinamis
   List<OfficeLocation> _locations = [];
   OfficeLocation? _selectedLocation;
+  StreamSubscription<List<OfficeLocation>>? _locationSubscription;
+  bool _isOnline = true;
+  StreamSubscription<bool>? _networkSubscription;
 
   // Double-scan protection flag
   bool _isProcessing = false;
@@ -52,7 +57,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _ttsService.init();
     _loadCompanyProfile();
     _loadLocations();
+    _subscribeLocationUpdates();
+    _checkInitialNetwork();
+    _networkSubscription = NetworkService.onConnectivityChanged.listen((online) {
+      if (mounted) setState(() => _isOnline = online);
+    });
     _initNfcListener();
+  }
+
+  Future<void> _checkInitialNetwork() async {
+    final online = await NetworkService.hasInternetConnection();
+    if (mounted) setState(() => _isOnline = online);
   }
 
   Future<void> _loadCompanyProfile() async {
@@ -76,6 +91,30 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _locations = locs;
       });
+    }
+  }
+
+  void _subscribeLocationUpdates() {
+    try {
+      _locationSubscription = _attendanceService.streamLocations().listen(
+        (locs) {
+          if (mounted && locs.isNotEmpty) {
+            setState(() {
+              _locations = locs;
+              // Jika lokasi yang dipilih sebelumnya sudah dihapus, perbarui ke lokasi pertama
+              if (_selectedLocation != null &&
+                  !locs.any((l) => l.id == _selectedLocation!.id)) {
+                _selectedLocation = locs.first;
+              }
+            });
+          }
+        },
+        onError: (e) {
+          debugPrint('Realtime stream error lokasi_kantor: $e');
+        },
+      );
+    } catch (e) {
+      debugPrint('Error subscribe lokasi_kantor: $e');
     }
   }
 
@@ -117,6 +156,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _locationSubscription?.cancel();
+    _networkSubscription?.cancel();
     NfcManager.instance.stopSession();
     _ttsService.stop();
     super.dispose();
@@ -137,7 +178,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (_isProcessing) return;
 
-    // 1. CEK STATUS GPS TERLEBIH DAHULU (Wajib Aktif)
+    // 1. CEK STATUS INTERNET PROAKTIF (Instan tanpa tunggu timeout database)
+    if (!_isOnline) {
+      _ttsService.speakNoInternet();
+      if (mounted) {
+        _showNoInternetAlert();
+      }
+      return;
+    }
+
+    // 2. CEK STATUS GPS TERLEBIH DAHULU (Wajib Aktif)
     final bool isGpsOn = await LocationService.isLocationEnabled();
     if (!isGpsOn) {
       _ttsService.speakLocationDisabled();
@@ -541,6 +591,34 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 22.0, vertical: 18.0),
             child: Column(
               children: [
+                // Banner Peringatan Offline (Sangat Jelas & Elegan)
+                if (!_isOnline)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.wifi_off_rounded, color: Color(0xFFDC2626), size: 18),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Koneksi internet terputus. Mohon periksa jaringan.',
+                            style: TextStyle(
+                              color: Color(0xFFDC2626),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // Header Perusahaan dengan Badge Cabang Terpilih
                 CompanyHeader(
                   companyName: _companyName,
@@ -572,6 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   flex: 8,
                   child: NfcScanArea(
                     isProcessing: _isProcessing,
+                    isOnline: _isOnline,
                     primaryColor: _primaryColor,
                     onSimulateTap: () {
                       _handleNfcAttendance('SIMULASI_ID');
