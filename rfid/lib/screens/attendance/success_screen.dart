@@ -45,7 +45,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
         }
       } else {
         timer.cancel();
-        // Otomatis kembali ke layar utama kiosk
+        // Otomatis kembali ke layar utama
         if (mounted) {
           Navigator.of(context).pop();
         }

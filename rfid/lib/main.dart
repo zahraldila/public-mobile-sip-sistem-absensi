@@ -20,16 +20,16 @@ Future<void> main() async {
     anonKey: SupabaseConfig.anonKey,
   );
 
-  runApp(const AttendanceKioskApp());
+  runApp(const AttendanceMobileApp());
 }
 
-class AttendanceKioskApp extends StatelessWidget {
-  const AttendanceKioskApp({super.key});
+class AttendanceMobileApp extends StatelessWidget {
+  const AttendanceMobileApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SIP Kiosk Attendance',
+      title: 'SIP Public Attendance',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

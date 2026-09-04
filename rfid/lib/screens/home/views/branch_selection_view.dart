@@ -148,7 +148,7 @@ class _BranchSelectionViewState extends State<BranchSelectionView> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'SISTEM ABSENSI KIOSK',
+                  'SISTEM ABSENSI MOBILE',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
