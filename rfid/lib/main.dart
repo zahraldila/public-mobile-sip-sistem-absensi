@@ -29,7 +29,7 @@ class AttendanceMobileApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SIP Public Attendance',
+      title: 'Public Mobile App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
